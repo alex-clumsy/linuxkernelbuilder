@@ -7,7 +7,7 @@ cd /usr/src
 kernelfile=`wget -O - 2>&1 https://www.kernel.org | grep "latest_link" -A 2 | grep -o 'https://[^"]*'`
 newkernel=`expr match "$kernelfile" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)'`
 currentkernel="`cat /proc/version | grep -o 'Linux version [^ ]*'`"
-newkernel=`expr match "$currentkernel" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)'`
+currentkernel=`expr match "$currentkernel" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)'`
 
 # check new kernel version
 if [ "$newkernel" != "$currentkernel" ];
