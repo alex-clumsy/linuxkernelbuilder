@@ -1,27 +1,29 @@
 #!/bin/sh
 
 # unpack and prepare
-cd /usr/src
+cd /usr/src || exit
 
 # check for new file
-kernelfile=`wget -O - 2>&1 https://www.kernel.org | grep "latest_link" -A 2 | grep -o 'https://[^"]*'`
-newkernel=`expr match "$kernelfile" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)'`
-currentkernel="`cat /proc/version | grep -o 'Linux version [^ ]*'`"
-currentkernel=`expr match "$currentkernel" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)'`
+kernelfile=$(wget -O - 2>&1 https://www.kernel.org | grep "latest_link" -A 2 | grep -o 'https://[^"]*')
+newkernel=$(expr match "$kernelfile" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)')
+currentkernel=$(grep -o 'Linux version [^ ]*' /proc/version)
+currentkernel=$(expr match "$currentkernel" '.*\([0-9]\+\.[0-9]\+\.[0-9]\+\)')
+# will use all available cores
+cpucores=$(nproc)
 
 # check new kernel version
 if [ "$newkernel" != "$currentkernel" ];
 then
-    echo "New kernel found!"
-    /usr/bin/wget -c $kernelfile
-    archname=`find *.xz`
-    tar xxf $archname
-    dirsrc=`find -P linux-* -maxdepth 0 -type d | head -n 1`
+    echo "New kernel found: $newkernel"
+    /usr/bin/wget -c "$kernelfile"
+    archname=$(find *.xz)
+    tar xxf "$archname"
+    dirsrc=$(find -P linux-* -maxdepth 0 -type d | head -n 1)
     rm linux
-    ln -s $dirsrc linux
+    ln -s "$dirsrc" linux
 
     # compile
-    cd /usr/src/linux
+    cd /usr/src/linux || exit
     make clean && make mrproper
     cp /boot/config-`uname -r` ./.config
     sed -i "s/CONFIG_MODULE_SIG_ALL/#CONFIG_MODULE_SIG_ALL/g" ./.config
@@ -30,13 +32,13 @@ then
     sed -i "s/CONFIG_DEBUG_INFO/#CONFIG_DEBUG_INFO/g" ./.config
     make menuconfig
     make-kpkg clean
-    startdate=`date`
-    make deb-pkg
-    finishdate=`date`
+    startdate=$(date)
+    make -j "$cpucores" deb-pkg
+    finishdate=$(date)
 
     cd /usr/src
-    rm -rf $dirsrc
-    rm $archname
+    rm -rf "$dirsrc"
+    rm "$archname"
 
     echo "Start time: $startdate"
     echo "Finish time: $finishdate"
