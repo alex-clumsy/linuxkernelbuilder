@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # unpack and prepare
 cd /usr/src || exit
@@ -14,17 +14,19 @@ cpucores=$(nproc)
 # check new kernel version
 if [ "$newkernel" != "$currentkernel" ];
 then
-    echo "New kernel found: $newkernel"
+    echo "New kernel found!"
+    mkdir /usr/src/linux
+    mount -t tmpfs -o size=8G,mode=0700 tmpfs /usr/src/linux
     /usr/bin/wget -c "$kernelfile"
     archname=$(find *.xz)
     tar xxf "$archname"
     dirsrc=$(find -P linux-* -maxdepth 0 -type d | head -n 1)
-    rm linux
-    ln -s "$dirsrc" linux
+    shopt -s dotglob
+    mv $dirsrc/* /usr/src/linux
 
     # compile
     cd /usr/src/linux || exit
-    make clean && make mrproper
+    make mrproper
     cp /boot/config-`uname -r` ./.config
     sed -i "s/CONFIG_MODULE_SIG_ALL/#CONFIG_MODULE_SIG_ALL/g" ./.config
     sed -i "s/CONFIG_MODULE_SIG_KEY/#CONFIG_MODULE_SIG_KEY/g" ./.config
@@ -39,6 +41,8 @@ then
     cd /usr/src
     rm -rf "$dirsrc"
     rm "$archname"
+    umount /usr/src/linux
+    rm -rf /usr/src/linux
 
     echo "Start time: $startdate"
     echo "Finish time: $finishdate"
